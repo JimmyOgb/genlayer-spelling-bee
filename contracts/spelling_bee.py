@@ -10,7 +10,10 @@ Contract Address (Testnet): 0x63Bfa1201F0b4e95bc9f7f1473c8cB57d2afa0Ac
 """
 
 import json
-from genlayer import *
+try:
+    from genlayer import *
+except ImportError:
+    pass
 
 
 @gl.dataclass
