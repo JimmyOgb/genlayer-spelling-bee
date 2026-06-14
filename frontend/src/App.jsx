@@ -1,12 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { createWalletClient, custom } from "viem";
-import { genlayer } from "genlayer-js";
 import HoneycombGrid from "./components/HoneycombGrid";
 import WordInput from "./components/WordInput";
-import ScorePanel from "./components/ScorePanel";
-import Leaderboard from "./components/Leaderboard";
-import FoundWords from "./components/FoundWords";
-import Toast from "./components/Toast";
+import { ScorePanel, FoundWords, Leaderboard, Toast } from "./components/index";
 import { useSpellingBeeContract } from "./hooks/useSpellingBeeContract";
 import { formatAddress } from "./lib/utils";
 
@@ -14,7 +10,7 @@ const CONTRACT_ADDRESS = "0x63Bfa1201F0b4e95bc9f7f1473c8cB57d2afa0Ac";
 
 export default function App() {
   const [account, setAccount] = useState(null);
-  const [activeTab, setActiveTab] = useState("game"); // "game" | "leaderboard"
+  const [activeTab, setActiveTab] = useState("game");
   const [toast, setToast] = useState(null);
 
   const {
@@ -30,7 +26,6 @@ export default function App() {
     refreshAll,
   } = useSpellingBeeContract({ contractAddress: CONTRACT_ADDRESS, account });
 
-  // ---- Wallet Connection ----
   const connectWallet = useCallback(async () => {
     if (!window.ethereum) {
       showToast("Please install MetaMask or a compatible wallet.", "error");
@@ -40,11 +35,7 @@ export default function App() {
       const [addr] = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-      const client = createWalletClient({
-        account: addr,
-        transport: custom(window.ethereum),
-      });
-      setAccount({ address: addr, client });
+      setAccount({ address: addr });
     } catch (err) {
       showToast("Wallet connection failed.", "error");
     }
@@ -63,7 +54,6 @@ export default function App() {
       }
       const result = await submitWord(word);
       if (!result) return;
-
       if (result.accepted) {
         showToast(result.message, result.is_pangram ? "pangram" : "success", {
           definition: result.definition,
@@ -92,14 +82,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0f0f13] text-white font-sans">
-      {/* ---- Header ---- */}
       <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🐝</span>
           <div>
-            <h1 className="text-lg font-bold tracking-tight">
-              GenLayer Spelling Bee
-            </h1>
+            <h1 className="text-lg font-bold tracking-tight">GenLayer Spelling Bee</h1>
             {puzzle && (
               <p className="text-xs text-white/40">
                 Round #{puzzle.round_number} · {puzzle.theme}
@@ -107,12 +94,10 @@ export default function App() {
             )}
           </div>
         </div>
-
         <div className="flex items-center gap-4">
           {gameStats && (
             <span className="text-xs text-white/40 hidden sm:block">
-              {gameStats.total_players} players ·{" "}
-              {gameStats.total_words_discovered} words found
+              {gameStats.total_players} players · {gameStats.total_words_discovered} words found
             </span>
           )}
           {account ? (
@@ -131,7 +116,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* ---- Nav Tabs ---- */}
       <nav className="flex border-b border-white/10 px-6">
         {["game", "leaderboard"].map((tab) => (
           <button
@@ -148,18 +132,14 @@ export default function App() {
         ))}
       </nav>
 
-      {/* ---- Main Content ---- */}
       <main className="max-w-5xl mx-auto px-4 py-8">
         {isLoading && !puzzle ? (
           <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
             <div className="w-10 h-10 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-            <p className="text-white/40 text-sm">
-              GenLayer AI is generating your puzzle…
-            </p>
+            <p className="text-white/40 text-sm">GenLayer AI is generating your puzzle…</p>
           </div>
         ) : activeTab === "game" ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left: Honeycomb + Input */}
             <div className="lg:col-span-2 flex flex-col items-center gap-6">
               {puzzle && (
                 <>
@@ -170,24 +150,17 @@ export default function App() {
                   />
                   <WordInput
                     centerLetter={puzzle.center_letter}
-                    allowedLetters={[
-                      puzzle.center_letter,
-                      ...puzzle.outer_letters,
-                    ]}
+                    allowedLetters={[puzzle.center_letter, ...puzzle.outer_letters]}
                     onSubmit={handleWordSubmit}
                     disabled={isTxPending || !account}
                     isPending={isTxPending}
                   />
                   {!account && (
-                    <p className="text-sm text-white/30">
-                      Connect wallet to submit words
-                    </p>
+                    <p className="text-sm text-white/30">Connect wallet to submit words</p>
                   )}
                 </>
               )}
             </div>
-
-            {/* Right: Score + Found Words */}
             <div className="flex flex-col gap-4">
               <ScorePanel score={playerScore} />
               <FoundWords
@@ -201,7 +174,6 @@ export default function App() {
         )}
       </main>
 
-      {/* ---- Toast ---- */}
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     </div>
   );

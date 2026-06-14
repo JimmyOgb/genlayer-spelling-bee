@@ -1,17 +1,14 @@
 import { useState, useCallback, useRef } from "react";
 import { createClient } from "genlayer-js";
-import { testnet } from "genlayer-js/chains";
 
-/**
- * useSpellingBeeContract
- * Provides all contract read/write interactions for the Spelling Bee dApp.
- */
+const GENLAYER_RPC = "https://studio.genlayer.com/api";
+
 export function useSpellingBeeContract({ contractAddress, account }) {
   const clientRef = useRef(null);
 
   const getClient = useCallback(() => {
     if (!clientRef.current) {
-      clientRef.current = createClient({ chain: testnet });
+      clientRef.current = createClient({ endpoint: GENLAYER_RPC });
     }
     return clientRef.current;
   }, []);
@@ -24,14 +21,10 @@ export function useSpellingBeeContract({ contractAddress, account }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isTxPending, setIsTxPending] = useState(false);
 
-  // ------------------------------------------------------------------ //
-  // Read helpers                                                         //
-  // ------------------------------------------------------------------ //
-
   const readContract = useCallback(
     async (method, args = []) => {
-      const client = getClient();
       try {
+        const client = getClient();
         const result = await client.readContract({
           address: contractAddress,
           functionName: method,
@@ -90,10 +83,6 @@ export function useSpellingBeeContract({ contractAddress, account }) {
     refreshFoundWords,
   ]);
 
-  // ------------------------------------------------------------------ //
-  // Write helpers                                                        //
-  // ------------------------------------------------------------------ //
-
   const writeContract = useCallback(
     async (method, args = []) => {
       if (!account) throw new Error("No wallet connected");
@@ -106,20 +95,14 @@ export function useSpellingBeeContract({ contractAddress, account }) {
           args,
           account: account.address,
         });
-
-        // Poll for receipt
         let receipt = null;
-        const maxAttempts = 60;
-        for (let i = 0; i < maxAttempts; i++) {
+        for (let i = 0; i < 60; i++) {
           await new Promise((r) => setTimeout(r, 2000));
           try {
             receipt = await client.getTransactionReceipt({ hash: txHash });
             if (receipt?.status === "finalized") break;
-          } catch (_) {
-            // still pending
-          }
+          } catch (_) {}
         }
-
         return receipt?.result ?? null;
       } finally {
         setIsTxPending(false);
@@ -128,15 +111,10 @@ export function useSpellingBeeContract({ contractAddress, account }) {
     [account, contractAddress, getClient]
   );
 
-  // ------------------------------------------------------------------ //
-  // Public API                                                           //
-  // ------------------------------------------------------------------ //
-
   const submitWord = useCallback(
     async (word) => {
       try {
         const result = await writeContract("submit_word", [word]);
-        // Refresh state after successful tx
         await Promise.allSettled([
           refreshPlayerScore(),
           refreshLeaderboard(),
@@ -149,20 +127,13 @@ export function useSpellingBeeContract({ contractAddress, account }) {
         return null;
       }
     },
-    [
-      writeContract,
-      refreshPlayerScore,
-      refreshLeaderboard,
-      refreshFoundWords,
-      refreshGameStats,
-    ]
+    [writeContract, refreshPlayerScore, refreshLeaderboard, refreshFoundWords, refreshGameStats]
   );
 
   const getHint = useCallback(
     async (letter) => {
       try {
-        const result = await writeContract("get_hint", [letter]);
-        return result;
+        return await writeContract("get_hint", [letter]);
       } catch (err) {
         console.error("getHint error:", err);
         return null;
